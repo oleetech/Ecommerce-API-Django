@@ -5,12 +5,32 @@ from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from .serializers import RegisterSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
-
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 # Register View
 class RegisterView(APIView):
-    permission_classes = [AllowAny]
+   
 
+    permission_classes = [permissions.AllowAny]
+
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['email', 'username', 'password'],
+            properties={
+                'email': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_EMAIL),
+                'username': openapi.Schema(type=openapi.TYPE_STRING),
+                'password': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_PASSWORD),
+            }
+        ),
+        responses={
+            201: 'User registration successful',
+            400: 'Bad Request. Invalid input. Check the error message for details.',
+        },
+        operation_description="Register a new user.",
+    )
     def post(self, request):
+       
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()

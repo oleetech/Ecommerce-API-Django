@@ -76,15 +76,15 @@ SIMPLE_JWT = {
 
 
 # django প্রজেক্টের settings.py 
-CORS_ALLOWED_ORIGINS = [
+# CORS_ALLOWED_ORIGINS = [
 
-'http://127.0.0.1:4000',
+# 'http://127.0.0.1:4000',
 
-] # Add other allowed origins as needed
+# ] # Add other allowed origins as needed
 
 
 
-CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOW_ALL_ORIGINS = True
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
