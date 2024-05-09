@@ -65,84 +65,81 @@ from .serializers import ProfileUpdateSerializer
 #             return Response(serializer.data)
 #         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)        
 
+
+
 from django.contrib.auth import get_user_model
 User = get_user_model()
 class ProfileUpdateView(APIView):
     """
     Profile Update API
-
     This API endpoint enables authenticated users to update their user profile. It supports updating profile details such as mobile number and profile picture.
-
-    ## HTTP Method: PUT
-
-    Use the PUT method to submit profile updates.
-
-    ## URL Parameters:
-
-    - **id** (integer): The ID of the user whose profile is to be updated.
-
-    ## Permissions:
-
-    - **Authenticated Users**: Only authenticated users can access this endpoint.
-    - **Superuser Privileges**: A superuser can update any user's profile.
-    - **User-Specific Permission**: Users can only update their own profile unless they have superuser privileges.
-
-    ## Request Format:
-
-    Send a multipart form data request with the necessary profile fields that need to be updated.
-
-    ## Headers:
-
-    - **Authorization**: Include a valid bearer token to authenticate the request.
-
-        Example: 'Authorization: Bearer <your_access_token>'
-
-    ## Body:
-
-    - **mobileNo**: The new mobile number.
-    - **profile_pic**: A file upload field for the profile picture.
-
-    ## Example Request:
-
-    ```bash
-    PUT http://example.com/wp-json/wp/v2/users/123/
-    Headers:
-        Authorization: Bearer <your_access_token>
-    Body:
-        mobileNo: 017xxxxxxxx
-        profile_pic: (attach image file)
-    ```
-
-    ## Responses:
-
-    - **200 OK**: The request was successful, and the profile was updated.
-    - **400 Bad Request**: The request was malformed. Check the error message for more details.
-    - **403 Forbidden**: You do not have permission to update this profile.
-    - **404 Not Found**: No user found with the provided ID.
-
-    ## Error Handling:
-
-    Responses will include a JSON object with error details should there be an issue with the request.
     """
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_object(self, pk):
-  
-        user = get_object_or_404(User, pk=pk)
-        self.check_object_permissions(self.request, user)
-        return user
-
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter('id', openapi.IN_PATH, type=openapi.TYPE_INTEGER, description="User ID")
+        ],
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'mobile_number': openapi.Schema(type=openapi.TYPE_STRING),
+                # Add other properties as needed for profile update
+            }
+        ),
+        responses={
+            200: 'Profile updated successfully',
+            400: 'Bad Request. Invalid input. Check the error message for details.',
+            403: 'Forbidden. You are not allowed to update this profile.'
+        },
+        operation_description="Update user profile details."
+    )
     def put(self, request, id, *args, **kwargs):
+        """
+        Update user profile details.
 
+        **Path Parameters**:
+        - `id` (integer): User ID.
+
+        **Example Request**:
+        ```json
+        {
+            "mobile_number": "1234567890"
+        }
+        ```
+
+        **Example Response**:
+        - 200 OK: Profile updated successfully.
+          ```json
+          {
+              "message": "Profile updated successfully"
+          }
+          ```
+
+        - 400 Bad Request: Invalid input.
+          ```json
+          {
+              "error": "Invalid input. Check the error message for details."
+          }
+          ```
+
+        - 403 Forbidden: You are not allowed to update this profile.
+          ```json
+          {
+              "detail": "আপনার এই প্রোফাইল আপডেট করার অনুমতি নেই।"
+          }
+          ```
+        """
         user = self.get_object(id)
         if request.user.id != id and not request.user.is_superuser:
             return Response({'detail': 'আপনার এই প্রোফাইল আপডেট করার অনুমতি নেই।'}, status=status.HTTP_403_FORBIDDEN)
         serializer = ProfileUpdateSerializer(user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
+            return Response({'message': 'Profile updated successfully'})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
+
 from .serializers import UserSerializer
 class GetAllUsersView(APIView):
     permission_classes = [permissions.AllowAny]  
@@ -179,10 +176,55 @@ from django.core.mail import send_mail
 from django.contrib.sites.shortcuts import get_current_site
 UserModel = get_user_model()
 
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
 class ForgotPasswordView(APIView):
     permission_classes = [AllowAny]
 
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['email'],
+            properties={
+                'email': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_EMAIL),
+            }
+        ),
+        responses={
+            200: 'Password reset link sent successfully',
+            404: 'User not found'
+        },
+        operation_description="Send a password reset link to the user's email.",
+    )
     def post(self, request):
+        """
+        Send a password reset link to the user's email.
+
+        **Example Request**:
+        ```json
+        {
+            "email": "user@example.com"
+        }
+        ```
+
+        **Example Response**:
+        - 200 OK: Password reset link sent successfully.
+          ```json
+          {
+              "message": "Password reset link sent successfully"
+          }
+          ```
+
+        - 404 Not Found: User not found.
+          ```json
+          {
+              "error": "User not found"
+          }
+          ```
+        """
         email = request.data.get('email')
         user = UserModel.objects.filter(email=email).first()
         if user:
@@ -202,10 +244,60 @@ class ForgotPasswordView(APIView):
             return Response({'message': 'Password reset link sent successfully'}, status=status.HTTP_200_OK)
         return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
+
 class ResetPasswordView(APIView):
     permission_classes = [AllowAny]
 
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['email', 'new_password'],
+            properties={
+                'email': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_EMAIL),
+                'new_password': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_PASSWORD),
+            }
+        ),
+        responses={
+            200: 'Password reset successfully',
+            400: 'Bad Request. Invalid token.',
+            404: 'User not found',
+        },
+        operation_description="Reset the user's password using the provided token.",
+    )
     def post(self, request, token):
+        """
+        Reset the user's password using the provided token.
+
+        **Example Request**:
+        ```json
+        {
+            "email": "user@example.com",
+            "new_password": "new_password_here"
+        }
+        ```
+
+        **Example Response**:
+        - 200 OK: Password reset successfully.
+          ```json
+          {
+              "message": "Password reset successfully"
+          }
+          ```
+
+        - 400 Bad Request: Invalid token.
+          ```json
+          {
+              "error": "Invalid token"
+          }
+          ```
+
+        - 404 Not Found: User not found.
+          ```json
+          {
+              "error": "User not found"
+          }
+          ```
+        """
         new_password = request.data.get('new_password')
         email = request.data.get('email')  
         user = UserModel.objects.filter(email=email).first()  
@@ -217,4 +309,4 @@ class ResetPasswordView(APIView):
             user.set_password(new_password)
             user.save()
             return Response({'message': 'Password reset successfully'}, status=status.HTTP_200_OK)
-        return Response({'error': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)                                                                           
+        return Response({'error': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)                                                                       
