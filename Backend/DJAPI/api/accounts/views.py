@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from .serializers import RegisterSerializer
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.tokens import RefreshToken,TokenObtainPairSerializer
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 # Register View
@@ -37,6 +37,18 @@ class RegisterView(APIView):
             user = serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        # Add additional user information to the token payload
+        token['email'] = user.email
+        token['username'] = user.username
+        # Add any other user information you want to include
+        return token
+    
 
 # Logout View
 class LogoutView(APIView):
@@ -191,7 +203,7 @@ class ForgotPasswordView(APIView):
             current_site = get_current_site(request)
             domain = current_site.domain
             # Construct the reset link
-            reset_link = f"http://{domain}/custom/v1/reset-password/{token}/"
+            reset_link = f"http://{domain}/wp-json/custom/v1/reset-password/{token}/"
             send_mail(
                 'Password Reset Request',
                 f'Use the following link to reset your password: {reset_link}',
