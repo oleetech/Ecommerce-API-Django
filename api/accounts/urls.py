@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import RegisterView, LogoutView,ProfileUpdateView,GetAllUsersView,GetUserView
+from .views import RegisterView, LogoutView,ProfileUpdateView,GetAllUsersView,GetUserView,ForgotPasswordView,ResetPasswordView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 urlpatterns = [
@@ -9,6 +9,9 @@ urlpatterns = [
     path('wp/v2/users/<int:id>/', ProfileUpdateView.as_view(), name='profile-update'),
     path('wp/v2/users/', GetAllUsersView.as_view(), name='get-all-users'),
     path('wp/v2/users/<int:pk>/', GetUserView.as_view(), name='get-user'),
+
+    path('wp/v2/users/forgot-password/', ForgotPasswordView.as_view(), name='forgot_password'),
+    path('wp/v2/users/reset-password/<str:token>/', ResetPasswordView.as_view(), name='reset_password'),
 
     # path('wp/v2/users/update-profile/', ProfileUpdateView.as_view(), name='update-profile'),
 

@@ -51,6 +51,15 @@ INSTALLED_APPS = [
 
 AUTH_USER_MODEL = 'accounts.CustomUser'
 
+# Email configuration
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'business39.web-hosting.com'  # Your cPanel SMTP server address
+EMAIL_PORT = 465  # Port for SMTP server (465 is commonly used for SSL)
+EMAIL_USE_SSL = True  # Set to True to use SSL encryption
+EMAIL_HOST_USER = 'admin@kreatech.ca'  # Your email address
+EMAIL_HOST_PASSWORD = 'admin@kreatech'  # Your email password
+DEFAULT_FROM_EMAIL = 'admin@kreatech.ca'  # The default sender email address
+
 
 
 REST_FRAMEWORK = {

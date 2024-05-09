@@ -1,4 +1,5 @@
 from django.shortcuts import get_object_or_404
+from django.http import Http404
 from rest_framework import status,permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -159,3 +160,61 @@ class GetUserView(APIView):
         user = get_object_or_404(User, pk=pk)
         serializer = UserSerializer(user)
         return Response(serializer.data, status=status.HTTP_200_OK)    
+    
+
+#   _____                _     _____                                    _ 
+#  |  __ \              | |   |  __ \                                  | |
+#  | |__) |___  ___  ___| |_  | |__) |_ _ ___ _____      _____  _ __ __| |
+#  |  _  // _ \/ __|/ _ \ __| |  ___/ _` / __/ __\ \ /\ / / _ \| '__/ _` |
+#  | | \ \  __/\__ \  __/ |_  | |  | (_| \__ \__ \\ V  V / (_) | | | (_| |
+#  |_|  \_\___||___/\___|\__| |_|   \__,_|___/___/ \_/\_/ \___/|_|  \__,_|
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
+
+def generate_reset_token(user):
+    return default_token_generator.make_token(user)
+
+from django.core.mail import send_mail
+from django.contrib.sites.shortcuts import get_current_site
+UserModel = get_user_model()
+
+class ForgotPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email')
+        user = UserModel.objects.filter(email=email).first()
+        if user:
+            token = default_token_generator.make_token(user)
+            # Get the current site domain
+            current_site = get_current_site(request)
+            domain = current_site.domain
+            # Construct the reset link
+            reset_link = f"http://{domain}/wp-json/wp/v2/users/reset-password/{token}/"
+            send_mail(
+                'Password Reset Request',
+                f'Use the following link to reset your password: {reset_link}',
+                'admin@kreatech.ca',  
+                [email],
+                fail_silently=False,
+            )
+            return Response({'message': 'Password reset link sent successfully'}, status=status.HTTP_200_OK)
+        return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+class ResetPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, token):
+        new_password = request.data.get('new_password')
+        email = request.data.get('email')  
+        user = UserModel.objects.filter(email=email).first()  
+        if not user:
+            raise Http404("User does not exist")
+        
+        if default_token_generator.check_token(user, token):
+            # Reset the user's password
+            user.set_password(new_password)
+            user.save()
+            return Response({'message': 'Password reset successfully'}, status=status.HTTP_200_OK)
+        return Response({'error': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)                                                                           
